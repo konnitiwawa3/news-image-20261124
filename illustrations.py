@@ -1,183 +1,104 @@
-"""Spot illustrations in the edition's 100-by-60 drawing coordinates."""
+"""An engraved conference table for the lead story."""
 
+from math import isqrt
 from random import Random
 
 
-class Scene:
-    def __init__(self, canvas, left, top, width, height):
-        self.canvas = canvas
-        self.left, self.top = left, top
-        self.width, self.height = width, height
-
-    def point(self, x, y):
-        return self.left + x * self.width / 100, self.top + y * self.height / 60
-
-    def rect(self, ink, x, y, width, height):
-        left, top = self.point(x, y)
-        self.canvas.box(left, top, width * self.width / 100, height * self.height / 60, ink)
-
-    def ellipse(self, ink, x, y, width, height):
-        left, top = self.point(x, y)
-        self.canvas.oval(left, top, width * self.width / 100, height * self.height / 60, ink)
-
-    def fill(self, ink, *coordinates):
-        points = iter(coordinates)
-        self.canvas.polygon([self.point(x, y) for x, y in zip(points, points, strict=True)], ink)
-
-    def stroke(self, ink, weight, *coordinates):
-        points = iter(coordinates)
-        self.canvas.line([self.point(x, y) for x, y in zip(points, points, strict=True)], ink, weight)
-
-    def horizon(self, edge, above, below):
-        self.rect(above, 0, 0, 100, 60)
-        self.rect(below, 0, edge, 100, 60 - edge)
-
-    def stipple(self, ink, seed, count, band, longest=3):
-        random = Random(seed)
-        for _ in range(count):
-            x = random.uniform(1, 97)
-            y = random.uniform(*band)
-            end = min(99, x + random.uniform(.6, longest))
-            self.stroke(ink, .46, x, y, end, y - .3)
+FRAME = (137, 104, 72)
+PLATE = (220, 194, 151)
+INK = (79, 59, 41)
+SHADE = (157, 120, 83)
+ACCENT = (148, 66, 46)
+LIGHT = (237, 215, 173)
+LAND = (170, 120, 79)
 
 
-def tanker(view, x, y, width, height):
-    def point(horizontal, vertical):
-        return x + horizontal * width, y + vertical * height
+def conference_plate(page, left, top):
+    width, height = 326, 223
+    rng = Random(241126)
 
-    def hull(ink, *coords):
-        pairs = iter(coords)
-        view.fill(ink, *(coordinate for a, b in zip(pairs, pairs, strict=True)
-                         for coordinate in point(a, b)))
+    def box(x, y, w, h, color):
+        page.box(left + x, top + y, w, h, color)
 
-    hull("dark_water", 0, .56, .13, .42, .89, .34, 1, .46, .93, .85, .12, 1)
-    hull("rust", .01, .57, .12, .76, .94, .61, .93, .85, .12, 1)
-    hull("coal", 0, .55, .13, .38, .89, .28, 1, .45, .91, .61, .11, .76)
-    hull("stone", .09, .54, .17, .43, .89, .34, .96, .45, .17, .69)
-    hull("steel", .22, .47, .85, .39, .88, .48, .22, .61)
-    for fraction in (.30, .43, .56, .69, .82):
-        a, b = point(fraction, .46 - fraction * .08)
-        c, d = point(fraction, .60 - fraction * .13)
-        view.stroke("coal", .7, a, b, c, d)
-    hull("mist", .16, .54, .16, .13, .28, .09, .33, .20, .33, .52)
-    hull("silver", .28, .09, .33, .20, .33, .52, .28, .56)
-    a, b = point(.18, .22)
-    c, d = point(.27, .19)
-    view.stroke("dark_water", 1.05, a, b, c, d)
-    a, b = point(.24, .09)
-    c, d = point(.24, -.20)
-    view.stroke("coal", .75, a, b, c, d)
+    def line(x1, y1, x2, y2, color, weight=1):
+        page.line(left + x1, top + y1, left + x2, top + y2, color, weight)
 
+    def ellipse(x, y, rx, ry, color):
+        page.ellipse(left + x, top + y, rx, ry, color)
 
-def hormuz(view):
-    view.horizon(25, "sky", "water")
-    view.ellipse("cream", 72, 3, 10, 29)
-    view.fill("cloud", 0, 7, 15, 8, 25, 13, 46, 13, 63, 17, 0, 17)
-    view.fill("mist", 0, 16, 30, 16, 52, 21, 85, 16, 100, 16, 100, 25, 0, 27)
-    view.fill("ridge", 0, 26, 11, 16, 20, 17, 24, 14, 36, 25, 42, 27, 0, 34)
-    view.fill("sand", 0, 27, 9, 18, 14, 19, 23, 21, 30, 26, 36, 29, 26, 32, 0, 38)
-    view.fill("stone", 0, 31, 9, 27, 15, 26, 26, 31, 20, 35, 0, 40)
-    view.fill("ridge", 76, 28, 88, 19, 94, 18, 100, 12, 100, 34)
-    view.fill("sand", 79, 28, 88, 25, 95, 26, 100, 23, 100, 33)
-    view.fill("dark_water", 0, 44, 19, 39, 53, 45, 100, 40, 100, 60, 0, 60)
-    view.fill("water", 0, 50, 40, 48, 76, 55, 100, 45, 100, 60, 0, 60)
-    view.stipple("wave", 501, 280, (34, 59), 4)
-    view.stipple("pale_water", 85, 133, (30, 57), 3)
+    def polygon(points, color):
+        page.polygon([(left + x, top + y) for x, y in points], color)
 
-    # Schematic vessel positions express the reported scale, without claiming locations.
-    for x, y, w, h in ((72, 32, 15, 5), (52, 34, 18, 7)):
-        tanker(view, x, y, w, h)
-    for px, py, w, h, ink in (
-        (54, 39, 8, 10, "smoke"), (56, 33, 8, 12, "smoke"),
-        (59, 27, 10, 13, "smoke"), (63, 21, 13, 14, "smoke"),
-        (67, 17, 13, 13, "cloud"), (72, 14, 17, 13, "cloud"),
-        (78, 13, 15, 9, "cloud"), (53, 43, 6, 7, "rust"),
-    ):
-        view.ellipse(ink, px, py, w, h)
-    view.fill("amber", 54, 50, 56, 43, 57, 47, 59, 44, 60, 51)
-    view.stroke("pale_water", 1.2, 8, 56, 18, 55, 34, 54, 54, 50, 67, 48)
-    tanker(view, 16, 37, 52, 16)
-    view.stroke("pale_water", .7, 9, 55, 16, 55, 23, 54)
-    view.stroke("mist", .8, 19, 56, 31, 55, 43, 54)
+    box(0, 0, width, height, FRAME)
+    box(2, 2, width - 4, height - 4, PLATE)
 
+    # Worn edges and short hatch marks give the plate a printed margin.
+    for _ in range(1350):
+        x = rng.randrange(5, width - 5)
+        y = rng.randrange(5, height - 5)
+        distance = min(x, y, width - x, height - y)
+        if distance < 28 or rng.randrange(6) == 0:
+            span = rng.choice((1, 1, 2))
+            box(x, y, span, 1, rng.choice((LIGHT, SHADE, PLATE)))
+    for y in range(22, 145, 7):
+        line(10, y, 65 + (y % 15), y - 3, LIGHT)
+        line(257 - (y % 11), y + 2, 314, y, LIGHT)
 
-def maritime_skyline(view):
-    view.horizon(48, "sky", "water")
-    view.ellipse("cream", 69, 8, 15, 23)
-    for x, width, height in ((2, 8, 22), (13, 8, 31), (25, 6, 20), (50, 7, 24),
-                              (69, 9, 19), (83, 7, 30), (92, 6, 23)):
-        view.rect("steel", x, 48 - height, width, height)
-        view.stroke("light_blue", .6, x + 2, 50 - height, x + 2, 46)
-    for x, top in ((34, 26), (40, 23), (46, 27)):
-        view.fill("dark_water", x, 48, x + 1.5, top, x + 5, top, x + 4.5, 48)
-    view.fill("cream", 30, 24, 38, 20, 55, 22, 53, 26, 33, 28)
-    view.stroke("dark_water", 1, 31, 26, 46, 25, 54, 22)
-    view.stipple("pale_water", 71, 73, (49, 58), 5)
+    # Chair backs and the rims of an empty negotiating table.
+    for x, y in ((45, 144), (86, 124), (251, 124), (285, 144)):
+        ellipse(x, y, 15, 19, INK)
+        ellipse(x, y - 2, 12, 16, SHADE)
+        for offset in range(-7, 9, 4):
+            line(x + offset, y - 10, x + offset + 1, y + 11, INK)
+    ellipse(164, 169, 144, 37, INK)
+    ellipse(164, 164, 144, 36, SHADE)
+    ellipse(164, 161, 143, 31, INK)
+    ellipse(164, 158, 139, 29, PLATE)
+    for x in range(35, 298, 6):
+        span = isqrt(max(0, 139 * 139 - (x - 164) ** 2))
+        low = 161 + span * 27 // 139
+        line(x, low, x - 1, low + 11, INK)
 
+    # Globe, with graticule and two hemispheres in the engraving.
+    ellipse(164, 143, 34, 6, INK)
+    box(158, 107, 12, 35, INK)
+    ellipse(164, 70, 56, 57, INK)
+    ellipse(164, 70, 53, 54, LIGHT)
+    polygon(((121, 42), (130, 31), (142, 32), (154, 39), (152, 47),
+             (142, 49), (137, 58), (142, 66), (150, 72), (145, 74),
+             (134, 69), (127, 56), (121, 53)), LAND)
+    polygon(((146, 74), (159, 77), (166, 85), (160, 98), (155, 103),
+             (153, 114), (149, 114), (148, 100), (142, 88)), LAND)
+    polygon(((180, 37), (190, 36), (201, 44), (208, 53), (211, 64),
+             (201, 62), (195, 57), (189, 59), (184, 55), (175, 56),
+             (169, 50)), LAND)
+    polygon(((173, 61), (182, 60), (194, 68), (188, 83), (181, 93),
+             (177, 88), (176, 81), (169, 73)), LAND)
+    polygon(((202, 93), (209, 91), (209, 101), (202, 106), (195, 103)), LAND)
+    for y in range(23, 119):
+        span = isqrt(max(0, 53 * 53 - (y - 70) ** 2))
+        for factor in (-72, -35, 29, 69):
+            x = 164 + span * factor // 100
+            if (x + y) % 5:
+                box(x, y, 1, 1, SHADE)
+        if y in (44, 58, 72, 86, 100):
+            for x in range(166 - span, 164 + span, 2):
+                box(x, y + (x - 164) ** 2 // 1800, 1, 1, SHADE)
+    for _ in range(235):
+        x = rng.randrange(113, 215)
+        y = rng.randrange(20, 121)
+        if (x - 164) ** 2 + (y - 70) ** 2 < 51 ** 2:
+            box(x, y, 1, 1, SHADE)
 
-def briefing(view):
-    view.horizon(34, "mist", "slate")
-    for x in range(4, 100, 13):
-        view.rect("sky", x, 1, 11, 31)
-        view.stroke("ridge", .55, x + 1, 2, x + 1, 33)
-    view.fill("stone", 0, 43, 33, 28, 69, 28, 100, 43, 82, 60, 18, 60)
-    view.fill("sand", 6, 45, 33, 31, 67, 31, 93, 45, 81, 57, 19, 57)
-    for x, y in ((25, 22), (41, 18), (59, 18), (75, 22), (20, 40), (80, 40)):
-        view.ellipse("coal", x - 4, y - 5, 8, 12)
-        view.ellipse("navy", x - 7, y + 5, 14, 10)
-    for x in (32, 49, 67):
-        view.fill("cream", x, 42, x + 5, 40, x + 9, 45, x + 4, 48)
-
-
-def airspace(view):
-    view.horizon(41, "light_blue", "steel")
-    view.fill("pine", 0, 42, 12, 27, 22, 31, 29, 27, 36, 40, 53, 43, 0, 52)
-    view.stipple("pale_water", 14, 72, (44, 60))
-    view.stroke("mist", 1.0, 2, 39, 24, 35, 39, 28, 69, 18)
-    view.fill("navy", 38, 29, 58, 25, 70, 19, 77, 18, 82, 20, 72, 23,
-              65, 28, 68, 33, 64, 35, 54, 30, 45, 33)
-    view.stroke("mist", .7, 54, 28, 73, 21, 79, 20)
-
-
-def rainfall(view):
-    view.horizon(35, "cloud", "pine")
-    view.fill("leaf", 0, 42, 18, 27, 34, 37, 53, 23, 67, 34, 84, 25, 100, 39, 100, 60, 0, 60)
-    view.fill("pine", 0, 54, 27, 39, 50, 53, 76, 40, 100, 46, 100, 60, 0, 60)
-    view.fill("pale_water", 74, 40, 81, 44, 67, 49, 67, 52, 82, 57, 78, 60, 56, 54, 57, 49)
-    for x in range(2, 100, 5):
-        height = 9 + (x * 5) % 20
-        view.stroke("mist", .6, x, height, x - 2, height + 12)
-
-
-def supplies(view):
-    view.horizon(34, "mist", "ridge")
-    view.rect("stone", 1, 6, 98, 20)
-    view.rect("light_blue", 32, 7, 36, 17)
-    for x, y, w, h in ((8, 36, 24, 17), (30, 29, 27, 23), (54, 39, 36, 14)):
-        view.rect("sand", x, y, w, h)
-        view.fill("cream", x, y, x + w, y, x + w - 4, y - 4, x + 3, y - 4)
-        view.rect("ridge", x + w * .44, y, w * .19, h)
-    view.stroke("rust", 2, 49, 12, 49, 20)
-    view.stroke("rust", 2, 44, 16, 54, 16)
-
-
-def parliament(view):
-    view.horizon(46, "light_blue", "stone")
-    view.fill("cream", 8, 25, 50, 7, 92, 25)
-    view.rect("sand", 11, 25, 78, 22)
-    view.rect("ridge", 16, 28, 68, 18)
-    for x in (19, 31, 43, 55, 67, 79):
-        view.rect("mist", x, 26, 4, 20)
-    for y in (45, 49, 53):
-        view.rect("cream", 12 - (y - 45) / 2, y, 76 + (y - 45), 1)
-
-
-SCENES = {
-    "hormuz": hormuz,
-    "singapore": maritime_skyline,
-    "briefing": briefing,
-    "airspace": airspace,
-    "rain": rainfall,
-    "supplies": supplies,
-    "parliament": parliament,
-}
+    # The interrupted manuscript is set on the near edge of the table.
+    polygon(((122, 151), (189, 148), (212, 174), (138, 180)), LIGHT)
+    line(126, 156, 190, 153, ACCENT, 2)
+    for y in (161, 165, 169, 173):
+        line(137, y + 3, 158, y + 2, SHADE)
+        line(170, y, 195 + (y % 4), y - 2, SHADE)
+    line(159, 150, 170, 158, INK, 2)
+    line(170, 158, 163, 163, INK, 2)
+    line(163, 163, 178, 175, INK, 2)
+    for x in (68, 98, 234, 261):
+        line(x - 1, 144, x + 8, 160, SHADE)
+        line(x, 144, x + 10, 144, INK)
